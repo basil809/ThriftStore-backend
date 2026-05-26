@@ -3,11 +3,13 @@
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "cors": "^2.8.6",
-    "dotenv": "^17.3.1",
-    "express": "^4.22.1",
+    "dotenv": "^17.4.2",
+    "express": "^4.22.2",
+    "express-validator": "^7.3.2",
     "jsonwebtoken": "^9.0.3",
-    "mongoose": "^9.3.1",
+    "mongoose": "^9.6.2",
     "multer": "^2.1.1",
+    "nodemailer": "^8.0.8",
     "open": "^11.0.0"
   }
 }

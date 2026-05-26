@@ -123,6 +123,21 @@ router.get('/all', verifyAdmin, async (req, res) => {
     }
 });
 
+
+// ==============================================
+// GET TOTAL NUMBER OF FLASH SALES (ADMIN DASHBOARD)
+// ==============================================
+router.get('/admin/flash-sale-count', verifyAdmin, async (req, res) => {
+    try {
+        const flashSaleCount = await FlashSale.countDocuments();
+        res.json({ success: true, flashSaleCount });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+});
+
+
 // ==============================================
 // GET DEAL OF THE WEEK (HOMEPAGE FEATURE)
 // ==============================================

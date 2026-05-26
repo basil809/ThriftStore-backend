@@ -2,24 +2,26 @@ import jwt from 'jsonwebtoken';
 import { ENV } from '../config/env.js';
 
 export const verifyAdmin = (req, res, next) => {
-    const token = req.headers.authorization?.split(' ')[1];
+    const authHeader = req.headers.authorization;
 
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ message: 'No token provided' });
+    }
+
+    const token = authHeader.split(' ')[1];
     if (!token) {
-        return res.status(401).json({ message: 'No token' });
+        return res.status(401).json({ message: 'No token provided' });
     }
 
     try {
-        const authHeader = req.headers.authorization;
-
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return res.status(401).json({ message: 'No token provided' });
+        const secret = process.env.JWT_SECRET || ENV.JWT_SECRET;
+        if (!secret) {
+            console.error('Auth error: JWT secret not set');
+            return res.status(500).json({ message: 'Server misconfiguration: JWT secret missing' });
         }
 
-        const token = authHeader.split(' ')[1];
+        const decoded = jwt.verify(token, secret);
 
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-        // OPTIONAL: check if admin
         if (!decoded || decoded.role !== 'admin') {
             return res.status(403).json({ message: 'Access denied. Not an admin.' });
         }
@@ -28,7 +30,8 @@ export const verifyAdmin = (req, res, next) => {
         next();
 
     } catch (error) {
-        console.error('Auth error:', error.message);
+        // Avoid printing the full token; show whether a token was present and basic error
+        console.error('Auth error:', error.message, 'tokenPresent=', !!token);
         return res.status(401).json({ message: 'Invalid or expired token' });
     }
 };

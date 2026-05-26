@@ -15,7 +15,7 @@ import categoryRoutes from './routes/categoryRoutes.js';
 import featuredRoutes from './routes/featuredRoutes.js';
 import subscriptionRoutes from './routes/subscriptionRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
-
+import newsletterRoutes from './routes/newsletterRoutes.js';
 // Fix for __dirname in ES Modules 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -53,6 +53,8 @@ app.use('/api/flash-sales', flashsaleRoutes);
 app.use('/api/featured', featuredRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
+app.use('/api/newsletters', newsletterRoutes);
+
 // Test
 app.get('/', (req, res) => {
     //Locate the index.html file in the public directory found in thrift-store and send it as the response 

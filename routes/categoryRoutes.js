@@ -31,6 +31,16 @@ router.get('/', async (req, res) => {
     }
 });
 
+// ✅ GET TOTAL CATEGORY
+router.get('/admin/categories-count', verifyAdmin, async (req, res) => {
+    try {
+        const categoryCount = await Category.countDocuments();
+        res.json({ success: true, categoryCount });
+    } catch (err) {
+        res.status(500).json({ success: false, message: err.message });
+    }
+});
+
 // ✅ UPDATE CATEGORY
 router.put('/:id', verifyAdmin, async (req, res) => {
     try {

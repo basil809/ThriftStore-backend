@@ -35,4 +35,18 @@ router.post('/subscribe', async (req, res) => {
     }
 });
 
+
+// ===================================
+// GET ALL SUBSCRIPTIONS (ADMIN ONLY)
+// ===================================
+router.get('/admin/count', verifyAdmin, async (req, res) => {
+    try{
+        const SubscriberCount = await Subscription.countDocuments();
+        res.json({ success: true, SubscriberCount });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: "Server error" });
+    }
+});
+
 export default router;

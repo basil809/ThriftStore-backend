@@ -2,6 +2,7 @@ import express from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 import Order from '../models/order.js'; // Changed 'Orders' to 'Order' for consistency
+import Product from '../models/Product.js';
 import { verifyAdmin } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
@@ -128,20 +129,17 @@ router.get('/admin/total-orders', verifyAdmin, async (req, res) => {
     }
 });
 
+
 // GET ANALYTICS (Admin)
 router.get('/admin/analytics', verifyAdmin, async (req, res) => {
     try {
-        // 1. Basic Stats (Already done)
-        const stats = await Order.aggregate([
-            { $match: { status: { $ne: "Cancelled" } } },
-            {
-                $group: {
-                    _id: null,
-                    totalRevenue: { $sum: "$totalAmount" },
-                    avgOrderValue: { $avg: "$totalAmount" },
-                    totalOrders: { $count: {} }
-                }
-            }
+        // 1. Monthly stats (current month) — exclude cancelled
+        const now = new Date();
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+        const monthlyAgg = await Order.aggregate([
+            { $match: { status: { $ne: "Cancelled" }, createdAt: { $gte: startOfMonth } } },
+            { $group: { _id: null, monthlyRevenue: { $sum: "$totalAmount" }, avgOrderValue: { $avg: "$totalAmount" }, totalOrders: { $sum: 1 } } }
         ]);
 
         // 2. NEW: Daily Sales Data for the Chart (Last 7 Days)
@@ -159,16 +157,34 @@ router.get('/admin/analytics', verifyAdmin, async (req, res) => {
         ]);
 
         const totalCustomers = await Order.distinct("billingDetails.email");
-        const result = stats[0] || { totalRevenue: 0, avgOrderValue: 0, totalOrders: 0 };
+        const result = monthlyAgg[0] || { monthlyRevenue: 0, avgOrderValue: 0, totalOrders: 0 };
+
+        // Inventory total (sum of price * stock across all products)
+        const inventoryAgg = await Product.aggregate([
+            { $group: { _id: null, inventoryValue: { $sum: { $multiply: ["$price", "$stock"] } } } }
+        ]);
+        const inventoryValue = (inventoryAgg[0] && inventoryAgg[0].inventoryValue) ? inventoryAgg[0].inventoryValue : 0;
+
+        // Total amount of all pending orders (Ksh.)
+        const pendingTotalAgg = await Order.aggregate([
+            { $match: { status: "Pending" } },
+            { $group: { _id: null, pendingTotal: { $sum: "$totalAmount" } } }
+        ]);
+        const ordersTotalKsh = (pendingTotalAgg[0] && pendingTotalAgg[0].pendingTotal) ? pendingTotalAgg[0].pendingTotal : 0;
 
         res.json({
             success: true,
             analytics: {
-                monthlyRevenue: result.totalRevenue,
+                monthlyRevenue: result.monthlyRevenue || 0,
                 totalCustomers: totalCustomers.length,
-                avgOrderValue: Math.round(result.avgOrderValue),
+                avgOrderValue: Math.round(result.avgOrderValue) || 0,
                 conversionRate: "3.2",
-                chartData: salesData // This will be [{_id: '2026-04-04', dailyTotal: 3749.99}, ...]
+                chartData: salesData, // This will be [{_id: '2026-04-04', dailyTotal: 3749.99}, ...]
+                // Overall totals
+                // `totalRevenueAllTime` = inventory value (sum price * stock)
+                totalRevenueAllTime: inventoryValue || 0,
+                // `totalOrdersKsh` = total amount from all non-cancelled orders
+                totalOrdersKsh: ordersTotalKsh || 0
             }
         });
     } catch (error) {
