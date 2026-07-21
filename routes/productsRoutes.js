@@ -1,7 +1,7 @@
 import express from 'express';
 import multer from 'multer';
 import Product from '../models/Product.js';
-import Order from '../models/Order.js';
+import Order from '../models/order.js';
 import { verifyAdmin } from '../middleware/authMiddleware.js';
 import { uploadMultipleToCloudinary } from '../utils/cloudinary.js';
 
