@@ -2,7 +2,7 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
-import Subscription from '..models/subscription.js';
+import Subscription from '../models/subscription.js';
 import { verifyAdmin } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
