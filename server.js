@@ -37,7 +37,7 @@ const imagesPath = path.join(__dirname, '..', 'public', 'images');
 app.use('/images', express.static(imagesPath));
 
 // 1. Serve your frontend 
-app.use(express.static(path.join(__dirname, '../public')));
+//app.use(express.static(path.join(__dirname, '../public')));
 
 // Serve uploads
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
@@ -55,9 +55,16 @@ app.use('/api/newsletters', newsletterRoutes);
 app.use('/api/payments', paymentRoutes);
 
 // Test
-app.get('/', (req, res) => {
+//app.get('/', (req, res) => {
     //Locate the index.html file in the public directory found in thrift-store and send it as the response 
-    res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+    //res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+//});
+
+app.get('/', (req, res) => {
+    res.json({
+        success: true,
+        message: 'Thrift Store API is running'
+    });
 });
 
 // 404
