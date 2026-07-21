@@ -2,7 +2,7 @@
 import express from 'express';
 import multer from 'multer';
 import nodemailer from 'nodemailer';
-import Subscription from '../models/Subscription.js';
+import Subscription from '../models/subscription.js';
 import Newsletter from '../models/Newsletter.js';
 import { verifyAdmin } from '../middleware/authMiddleware.js';
 import { uploadToCloudinary } from '../utils/cloudinary.js';
