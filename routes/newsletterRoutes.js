@@ -5,21 +5,14 @@ import nodemailer from 'nodemailer';
 import Subscription from '../models/Subscription.js';
 import Newsletter from '../models/Newsletter.js';
 import { verifyAdmin } from '../middleware/authMiddleware.js';
+import { uploadToCloudinary } from '../utils/cloudinary.js';
 
 const router = express.Router();
 
 // ===============================
 // MULTER FILE UPLOAD SETUP (SECURE)
 // ===============================
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/newsletters'); // Ensure this directory exists
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, uniqueSuffix + '-' + file.originalname);
-    }
-});
+const storage = multer.memoryStorage();
 
 // File filter to restrict uploads strictly to images
 const fileFilter = (req, file, cb) => {
@@ -70,8 +63,8 @@ router.post('/send', verifyAdmin, upload.single('image'), async (req, res) => {
             return res.status(400).json({ success: false, message: "Subject, Message, and Sender are required." });
         }
 
-        // Get uploaded image path if exists
-        const imageUrl = req.file ? `/uploads/newsletters/${req.file.filename}` : null;
+        // Get uploaded image URL if exists
+        const imageUrl = req.file ? await uploadToCloudinary(req.file.buffer, 'newsletters') : null;
 
         // 2. Fetch all subscribers
         const subscribers = await Subscription.find({}, 'email');
@@ -95,7 +88,7 @@ router.post('/send', verifyAdmin, upload.single('image'), async (req, res) => {
                     <hr style="border: 0; border-top: 1px solid #eee;">
                     <h3>${subject}</h3>
                     <p style="white-space: pre-line; line-height: 1.6; color: #333;">${message}</p>
-                    ${imageUrl ? `<div style="text-align: center; margin-top: 20px;"><img src="${process.env.BASE_URL}${imageUrl}" alt="Newsletter Image" style="max-width: 100%; height: auto; border-radius: 5px;"/></div>` : ''}
+                    ${imageUrl ? `<div style="text-align: center; margin-top: 20px;"><img src="${imageUrl}" alt="Newsletter Image" style="max-width: 100%; height: auto; border-radius: 5px;"/></div>` : ''}
                     <hr style="border: 0; border-top: 1px solid #eee; margin-top: 30px;">
                     <p style="font-size: 11px; color: #777; text-align: center;">
                         You received this email because you subscribed to Retro Rack Thriftstore. <br>
@@ -108,8 +101,8 @@ router.post('/send', verifyAdmin, upload.single('image'), async (req, res) => {
         // If there's an image attachment, include it in the email bundle payload safely
         if (req.file) {
             mailOptions.attachments = [{
-                filename: req.file.filename,
-                path: req.file.path
+                filename: req.file.originalname,
+                content: req.file.buffer
             }];
         }
 

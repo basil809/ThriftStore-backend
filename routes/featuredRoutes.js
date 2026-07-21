@@ -1,8 +1,8 @@
 import express from "express";
 import multer from "multer";
-import path from 'path';
 import Featured from '../models/featured.js';
 import { verifyAdmin } from "../middleware/authMiddleware.js";
+import { uploadMultipleToCloudinary } from '../utils/cloudinary.js';
 
 const router = express.Router();
 
@@ -12,15 +12,7 @@ const router = express.Router();
 // =============================
 // MULTER CONFIG (🔥 MUST BE BEFORE ROUTES)
 // =============================
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/products');
-    },
-    filename: (req, file, cb) => {
-        const uniqueName = Date.now() + '-' + file.originalname;
-        cb(null, uniqueName);
-    }
-});
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
@@ -43,7 +35,7 @@ router.post('/', verifyAdmin, upload.array('images', 10), async (req, res) => {
             return res.status(400).json({ message: 'No Images uploaded' });
         }
 
-        const imagePaths = req.files.map(file => file.filename);
+        const imageUrls = await uploadMultipleToCloudinary(req.files, 'featured');
 
         // ✅ FIX ALL ARRAY FIELDS
         const category = req.body.category ? JSON.parse(req.body.category) : [];
@@ -61,7 +53,7 @@ router.post('/', verifyAdmin, upload.array('images', 10), async (req, res) => {
             rating,
             colors,
             sizes,
-            images: imagePaths
+            images: imageUrls
         });
 
         const savedFeature = await newFeature.save();
@@ -96,14 +88,19 @@ router.put('/:id', verifyAdmin, upload.array('images', 10), async (req, res) => 
     try{
         const { name, category, price, stock, description } = req.body;
 
-        const feature = await Featured.findByIdAndUpdate(req.params.id, {
+        const updateData = {
             name,
             category,
             price,
             stock,
-            description,
-            images: req.files.map(file => file.filename)
-        }, { new: true });
+            description
+        };
+
+        if (req.files && req.files.length > 0) {
+            updateData.images = await uploadMultipleToCloudinary(req.files, 'featured');
+        }
+
+        const feature = await Featured.findByIdAndUpdate(req.params.id, updateData, { new: true });
 
         if (!feature) {
             return res.status(404).json({ message: 'Feature not found' });

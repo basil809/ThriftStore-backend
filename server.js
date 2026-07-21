@@ -1,6 +1,6 @@
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import multer from 'multer'; // Import multer to handle MulterError
@@ -16,12 +16,10 @@ import featuredRoutes from './routes/featuredRoutes.js';
 import subscriptionRoutes from './routes/subscriptionRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import newsletterRoutes from './routes/newsletterRoutes.js';
+import paymentRoutes from './routes/paymentRoutes.js';
 // Fix for __dirname in ES Modules 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-
-// Load env
-dotenv.config();
 
 // Connect DB
 connectDB();
@@ -54,6 +52,7 @@ app.use('/api/featured', featuredRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/newsletters', newsletterRoutes);
+app.use('/api/payments', paymentRoutes);
 
 // Test
 app.get('/', (req, res) => {

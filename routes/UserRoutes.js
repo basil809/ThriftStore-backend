@@ -8,21 +8,14 @@ import Product from '../models/Product.js';
 import Feature from '../models/featured.js';
 import FlashSale from '../models/flashsale.js';
 import { verifyAdmin } from '../middleware/authMiddleware.js';
+import { uploadToCloudinary } from '../utils/cloudinary.js';
 
 const router = express.Router();
 
 // =============================
 // MULTER CONFIG
 // =============================
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/products');
-    },
-    filename: (req, file, cb) => {
-        const uniqueName = Date.now() + '-' + file.originalname;
-        cb(null, uniqueName);
-    }
-});
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
@@ -183,7 +176,7 @@ router.put('/upload-profile-image', upload.single('image'), async (req, res) => 
         const token = req.headers.authorization;
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
-        const imagePath = `/uploads/products/${req.file.filename}`;
+        const imagePath = await uploadToCloudinary(req.file.buffer, 'profiles');
 
         const user = await User.findByIdAndUpdate(
             decoded.id,

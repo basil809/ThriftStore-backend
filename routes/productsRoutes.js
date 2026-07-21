@@ -1,24 +1,16 @@
 import express from 'express';
 import multer from 'multer';
-import path from 'path';
 import Product from '../models/Product.js';
 import Order from '../models/Order.js';
 import { verifyAdmin } from '../middleware/authMiddleware.js';
+import { uploadMultipleToCloudinary } from '../utils/cloudinary.js';
 
 const router = express.Router();
 
 // =============================
 // MULTER CONFIG
 // =============================
-const storage = multer.diskStorage({
-    destination: (req, file, cb) => {
-        cb(null, 'uploads/products');
-    },
-    filename: (req, file, cb) => {
-        const uniqueName = Date.now() + '-' + file.originalname;
-        cb(null, uniqueName);
-    }
-});
+const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
     if (file.mimetype.startsWith('image/')) {
@@ -41,7 +33,7 @@ router.post('/', verifyAdmin, upload.array('images', 10), async (req, res) => {
             return res.status(400).json({ message: 'No images uploaded' });
         }
 
-        const imagePaths = req.files.map(file => file.filename);
+        const imageUrls = await uploadMultipleToCloudinary(req.files, 'products');
 
         // 🔥 IMPORTANT: Parse the JSON strings back into Arrays
         const colors = req.body.colors ? JSON.parse(req.body.colors) : [];
@@ -58,7 +50,7 @@ router.post('/', verifyAdmin, upload.array('images', 10), async (req, res) => {
             rating,
             colors, // Saved as array
             sizes,  // Saved as array
-            images: imagePaths
+            images: imageUrls
         });
 
         const savedProduct = await newProduct.save();
@@ -94,7 +86,7 @@ router.put('/:id', verifyAdmin, upload.array('images', 10), async (req, res) => 
 
         // Only update images if new ones were uploaded
         if (req.files && req.files.length > 0) {
-            updateData.images = req.files.map(file => file.filename);
+            updateData.images = await uploadMultipleToCloudinary(req.files, 'products');
         }
 
         const product = await Product.findByIdAndUpdate(
