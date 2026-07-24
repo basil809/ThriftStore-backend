@@ -1,5 +1,6 @@
 import express from 'express';
 import jwt from 'jsonwebtoken';
+import fetch from 'node-fetch';
 
 const router = express.Router();
 
@@ -56,6 +57,7 @@ router.post('/paycloud/stk-push', async (req, res) => {
         const tokenData = await tokenResponse.json().catch(() => ({}));
 
         if (!tokenResponse.ok || !tokenData.access_token) {
+            console.error('PayCloud token error', { status: tokenResponse.status, body: tokenData });
             return res.status(502).json({
                 success: false,
                 message: 'Unable to authenticate with PayCloud right now.',
@@ -79,6 +81,7 @@ router.post('/paycloud/stk-push', async (req, res) => {
         const stkData = await stkResponse.json().catch(() => ({}));
 
         if (!stkResponse.ok) {
+            console.error('PayCloud STK response error', { status: stkResponse.status, body: stkData });
             return res.status(502).json({
                 success: false,
                 message: 'STK push could not be initiated. Please use the manual payment instructions.',
