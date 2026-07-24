@@ -12,7 +12,11 @@ router.post('/paycloud/stk-push', async (req, res) => {
         }
 
         const token = authHeader.split(' ')[1];
-        jwt.verify(token, process.env.JWT_SECRET);
+        try {
+            jwt.verify(token, process.env.JWT_SECRET);
+        } catch (err) {
+            return res.status(401).json({ success: false, message: 'Invalid or malformed token' });
+        }
 
         const { phone, amount, description } = req.body;
         const consumerKey = process.env.PAYCLOUD_CONSUMER_KEY;
@@ -73,11 +77,6 @@ router.post('/paycloud/stk-push', async (req, res) => {
             method: 'POST',
             headers: {
                 Authorization: `Bearer ${accessToken}`,
-                'Content-Type': 'application/json'
-            },
-            method: 'POST',
-            headers: {
-                Authorization: `Bearer ${tokenData.access_token}`,
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
