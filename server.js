@@ -28,7 +28,13 @@ const app = express();
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({
+  verify: (req, res, buf) => {
+    if (buf && buf.length) {
+      req.rawBody = buf;
+    }
+  }
+}));
 
 // Define the path to your images folder (one level up in thrift-store)
 const imagesPath = path.join(__dirname, '..', 'public', 'images');
