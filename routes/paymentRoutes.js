@@ -17,7 +17,8 @@ router.post('/paycloud/stk-push', async (req, res) => {
         const { phone, amount, description } = req.body;
         const consumerKey = process.env.PAYCLOUD_CONSUMER_KEY;
         const consumerSecret = process.env.PAYCLOUD_CONSUMER_SECRET;
-        const baseUrl = process.env.PAYCLOUD_BASE_URL || 'https://pay.cloud.or.ke';
+        const rawBaseUrl = process.env.PAYCLOUD_BASE_URL || 'https://pay.cloud.or.ke';
+        const baseUrl = rawBaseUrl.replace(/^https?:\/\/(www\.)?pay\.cloud\.or\.ke/i, 'https://www.pay.cloud.or.ke');
 
         if (!consumerKey || !consumerSecret) {
             return res.status(500).json({
@@ -50,8 +51,9 @@ router.post('/paycloud/stk-push', async (req, res) => {
             method: 'POST',
             headers: {
                 Authorization: `Basic ${Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64')}`,
-                'Content-Type': 'application/json'
-            }
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: 'grant_type=client_credentials'
         });
 
         const tokenData = await tokenResponse.json().catch(() => ({}));
