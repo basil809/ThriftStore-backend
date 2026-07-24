@@ -57,8 +57,10 @@ router.post('/paycloud/stk-push', async (req, res) => {
         });
 
         const tokenData = await tokenResponse.json().catch(() => ({}));
+        const tokenPayload = tokenData.data || tokenData;
+        const accessToken = tokenPayload.access_token;
 
-        if (!tokenResponse.ok || !tokenData.access_token) {
+        if (!tokenResponse.ok || !accessToken) {
             console.error('PayCloud token error', { status: tokenResponse.status, body: tokenData });
             return res.status(502).json({
                 success: false,
@@ -68,6 +70,11 @@ router.post('/paycloud/stk-push', async (req, res) => {
         }
 
         const stkResponse = await fetch(`${baseUrl}/api/payments/mpesa/stkpush`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Bearer ${accessToken}`,
+                'Content-Type': 'application/json'
+            },
             method: 'POST',
             headers: {
                 Authorization: `Bearer ${tokenData.access_token}`,
