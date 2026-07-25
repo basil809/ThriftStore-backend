@@ -137,7 +137,7 @@ router.delete('/:id', verifyAdmin, async (req, res) => {
 
 router.get('/products', async (req, res) => {
     try {
-        const products = await Product.find();
+        const products = await Product.find().sort({ createdAt: -1 });
         res.json({ success: true, products });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
