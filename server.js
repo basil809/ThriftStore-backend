@@ -17,6 +17,7 @@ import subscriptionRoutes from './routes/subscriptionRoutes.js';
 import orderRoutes from './routes/orderRoutes.js';
 import newsletterRoutes from './routes/newsletterRoutes.js';
 import paymentRoutes from './routes/paymentRoutes.js';
+import advertisementRoutes from './routes/advertisementRoutes.js';
 // Fix for __dirname in ES Modules 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -58,6 +59,7 @@ app.use('/api/featured', featuredRoutes);
 app.use('/api/categories', categoryRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/newsletters', newsletterRoutes);
+app.use('/api/advertisements', advertisementRoutes);
 app.use('/api/payments', paymentRoutes);
 
 // Test
