@@ -107,11 +107,22 @@ router.put('/:id', verifyAdmin, upload.array('images', 10), async (req, res) => 
 });
 
 // =============================
-// GET ALL PRODUCTS (ADMIN)
+// PUBLIC PRODUCTS LIST / SEARCH
 // =============================
-router.get('/', verifyAdmin, async (req, res) => {
+router.get('/', async (req, res) => {
     try {
-        const products = await Product.find().sort({ createdAt: -1 });
+        const searchTerm = (req.query.search || req.query.q || '').toString().trim();
+        const filter = searchTerm ? {
+            $or: [
+                { name: { $regex: searchTerm, $options: 'i' } },
+                { category: { $regex: searchTerm, $options: 'i' } },
+                { description: { $regex: searchTerm, $options: 'i' } },
+                { gender: { $regex: searchTerm, $options: 'i' } },
+                { productType: { $regex: searchTerm, $options: 'i' } }
+            ]
+        } : {};
+
+        const products = await Product.find(filter).sort({ createdAt: -1 });
         res.json(products);
     } catch (error) {
         res.status(500).json({ message: 'Server error' });
