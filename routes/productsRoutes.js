@@ -137,7 +137,18 @@ router.delete('/:id', verifyAdmin, async (req, res) => {
 
 router.get('/products', async (req, res) => {
     try {
-        const products = await Product.find().sort({ createdAt: -1 });
+        const searchTerm = (req.query.search || req.query.q || '').toString().trim();
+        const filter = searchTerm ? {
+            $or: [
+                { name: { $regex: searchTerm, $options: 'i' } },
+                { category: { $regex: searchTerm, $options: 'i' } },
+                { description: { $regex: searchTerm, $options: 'i' } },
+                { gender: { $regex: searchTerm, $options: 'i' } },
+                { productType: { $regex: searchTerm, $options: 'i' } }
+            ]
+        } : {};
+
+        const products = await Product.find(filter).sort({ createdAt: -1 });
         res.json({ success: true, products });
     } catch (err) {
         res.status(500).json({ success: false, message: err.message });
