@@ -4,6 +4,7 @@ import User from '../models/User.js';
 import Order from '../models/order.js'; // Changed 'Orders' to 'Order' for consistency
 import Product from '../models/Product.js';
 import { verifyAdmin } from '../middleware/authMiddleware.js';
+import { sendPurchaseEvent } from '../utils/metaConversionsApi.js';
 
 const router = express.Router();
 
@@ -36,6 +37,7 @@ router.post('/create', async (req, res) => {
 
         await newOrder.save();
         await User.findByIdAndUpdate(decoded.id, { $set: { cart: [] } });
+        await sendPurchaseEvent(newOrder, req);
 
         res.status(201).json({ success: true, message: "Order placed successfully", order: newOrder });
     } catch (error) {

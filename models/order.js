@@ -29,6 +29,7 @@ const OrderSchema = new mongoose.Schema({
     totalAmount: Number,
     status: { type: String, default: 'Pending', enum: ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'] },
     paymentStatus: { type: String, default: 'Unpaid' }, 
+    metaPixelPurchaseSent: { type: Boolean, default: false },
     createdAt: { type: Date, default: Date.now },
 }, { timestamps: true });
 

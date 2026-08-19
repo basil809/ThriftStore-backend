@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken';
 import fetch from 'node-fetch';
 import crypto from 'crypto';
 import Order from '../models/order.js';
+import { sendPurchaseEvent } from '../utils/metaConversionsApi.js';
 
 const router = express.Router();
 
@@ -225,8 +226,9 @@ router.post('/paycloud/callback', async (req, res) => {
             return res.status(404).json({ success: false, message: 'Order not found.' });
         }
 
-        const isSuccess = /success|paid|completed|approved/i.test(String(eventType || statusValue));
-        const isFailure = /fail|decline|cancel|rejected|error/i.test(String(eventType || statusValue));
+        const callbackState = `${eventType} ${statusValue}`;
+        const isSuccess = /success|paid|completed|approved/i.test(callbackState);
+        const isFailure = /fail|decline|cancel|rejected|error/i.test(callbackState);
 
         if (isSuccess) {
             order.paymentStatus = 'Paid';
@@ -243,6 +245,10 @@ router.post('/paycloud/callback', async (req, res) => {
         }
 
         await order.save();
+
+        if (isSuccess) {
+            await sendPurchaseEvent(order, req);
+        }
 
         return res.status(200).json({ success: true, message: 'Payment callback processed.', orderId: order.orderId, paymentStatus: order.paymentStatus });
     } catch (error) {
