@@ -60,12 +60,12 @@ router.post('/paycloud/admin-stk-push', verifyAdmin, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Customer details and at least one item are required.' });
         }
 
-        const rawPhone = String(billingDetails.phone || '').replace(/[\\s-]/g, '');
+        const rawPhone = String(billingDetails.phone || '').replace(/[\s-]/g, '');
         const phone = rawPhone.startsWith('+254') ? rawPhone.slice(1)
             : rawPhone.startsWith('0') ? `254${rawPhone.slice(1)}`
             : rawPhone.startsWith('254') ? rawPhone
             : `254${rawPhone}`;
-        if (!/^254[17]\\d{8}$/.test(phone)) {
+        if (!/^254[17]\d{8}$/.test(phone)) {
             return res.status(400).json({ success: false, message: 'Enter a valid Kenyan M-Pesa phone number.' });
         }
 
