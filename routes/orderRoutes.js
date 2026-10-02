@@ -46,6 +46,43 @@ router.post('/create', async (req, res) => {
     }
 });
 
+router.post('/admin/create', verifyAdmin, async (req, res) => {
+    try {
+        const { billingDetails, items, subtotal, shippingFee, totalAmount, status, paymentStatus } = req.body;
+        if (!billingDetails || !Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ success: false, message: 'Customer details and at least one item are required.' });
+        }
+
+        const email = String(billingDetails.email || '').trim();
+        const phone = String(billingDetails.phone || '').trim();
+        const client = email || phone
+            ? await User.findOne({ $or: [
+                ...(email ? [{ $expr: { $eq: [{ $toLower: '$email' }, email.toLowerCase()] } }] : []),
+                ...(phone ? [{ phone }, { MpesaNo: phone }] : [])
+            ] })
+            : null;
+
+        const order = new Order({
+            user: client?._id || null,
+            orderId: `RR-${Math.floor(1000 + Math.random() * 9000)}`,
+            transactionId: `TRX-${Math.random().toString(36).slice(2, 11).toUpperCase()}`,
+            billingDetails,
+            items,
+            subtotal: Number(subtotal) || 0,
+            shippingFee: Number(shippingFee) || 0,
+            totalAmount: Number(totalAmount) || 0,
+            status: status || 'Pending',
+            paymentStatus: paymentStatus || 'Unpaid'
+        });
+
+        await order.save();
+        return res.status(201).json({ success: true, message: 'Order created successfully.', order });
+    } catch (error) {
+        console.error('Admin order creation error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to create order.' });
+    }
+});
+
 // =============================================
 // GET ALL ORDERS FOR LOGGED-IN USER
 // =============================================

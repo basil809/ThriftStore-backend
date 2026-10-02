@@ -3,6 +3,8 @@ import jwt from 'jsonwebtoken';
 import fetch from 'node-fetch';
 import crypto from 'crypto';
 import Order from '../models/order.js';
+import User from '../models/User.js';
+import { verifyAdmin } from '../middleware/authMiddleware.js';
 import { sendPurchaseEvent } from '../utils/metaConversionsApi.js';
 
 const router = express.Router();
@@ -50,6 +52,105 @@ const extractTransactionReference = (payload) => {
 
     return null;
 };
+
+router.post('/paycloud/admin-stk-push', verifyAdmin, async (req, res) => {
+    try {
+        const { billingDetails, items, subtotal, shippingFee, totalAmount } = req.body;
+        if (!billingDetails || !Array.isArray(items) || items.length === 0) {
+            return res.status(400).json({ success: false, message: 'Customer details and at least one item are required.' });
+        }
+
+        const rawPhone = String(billingDetails.phone || '').replace(/[\\s-]/g, '');
+        const phone = rawPhone.startsWith('+254') ? rawPhone.slice(1)
+            : rawPhone.startsWith('0') ? `254${rawPhone.slice(1)}`
+            : rawPhone.startsWith('254') ? rawPhone
+            : `254${rawPhone}`;
+        if (!/^254[17]\\d{8}$/.test(phone)) {
+            return res.status(400).json({ success: false, message: 'Enter a valid Kenyan M-Pesa phone number.' });
+        }
+
+        const amount = Number(totalAmount);
+        if (!Number.isFinite(amount) || amount <= 0) {
+            return res.status(400).json({ success: false, message: 'Order total must be greater than zero.' });
+        }
+
+        const consumerKey = process.env.PAYCLOUD_CONSUMER_KEY;
+        const consumerSecret = process.env.PAYCLOUD_CONSUMER_SECRET;
+        if (!consumerKey || !consumerSecret) {
+            return res.status(500).json({ success: false, message: 'PayCloud credentials are not configured on the server.' });
+        }
+
+        const orderId = `RR-${Math.floor(1000 + Math.random() * 9000)}`;
+        const transactionId = `TRX-${Math.random().toString(36).slice(2, 11).toUpperCase()}`;
+        const email = String(billingDetails.email || '').trim();
+        const client = email
+            ? await User.findOne({ $expr: { $eq: [{ $toLower: '$email' }, email.toLowerCase()] } })
+            : await User.findOne({ $or: [{ phone }, { MpesaNo: phone }] });
+        const order = new Order({
+            user: client?._id || null,
+            orderId,
+            transactionId,
+            billingDetails: { ...billingDetails, phone },
+            items,
+            subtotal: Number(subtotal) || 0,
+            shippingFee: Number(shippingFee) || 0,
+            totalAmount: amount,
+            paymentStatus: 'Pending',
+            status: 'Pending'
+        });
+        await order.save();
+
+        const rawBaseUrl = process.env.PAYCLOUD_BASE_URL || 'https://pay.cloud.or.ke';
+        const baseUrl = rawBaseUrl
+            .replace('https://pay.cloud.or.ke', 'https://www.pay.cloud.or.ke')
+            .replace('http://pay.cloud.or.ke', 'https://www.pay.cloud.or.ke');
+        const tokenResponse = await fetch(`${baseUrl}/api/oauth/token`, {
+            method: 'POST',
+            headers: {
+                Authorization: `Basic ${Buffer.from(`${consumerKey}:${consumerSecret}`).toString('base64')}`,
+                'Content-Type': 'application/x-www-form-urlencoded'
+            },
+            body: 'grant_type=client_credentials'
+        });
+        const tokenData = await tokenResponse.json().catch(() => ({}));
+        const accessToken = (tokenData.data || tokenData).access_token;
+        if (!tokenResponse.ok || !accessToken) {
+            order.paymentStatus = 'Unpaid';
+            await order.save();
+            return res.status(502).json({ success: false, message: 'Order was created, but PayCloud authentication failed.', orderId });
+        }
+
+        const callbackUrl = `${process.env.BASE_URL || 'http://localhost:3000'}/api/payments/paycloud/callback`;
+        const stkResponse = await fetch(`${baseUrl}/api/payments/mpesa/stkpush`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                phone,
+                amount: Math.round(amount),
+                description: `Retro Rack order ${orderId}`,
+                callback_url: callbackUrl
+            })
+        });
+        const stkData = await stkResponse.json().catch(() => ({}));
+        if (!stkResponse.ok) {
+            order.paymentStatus = 'Unpaid';
+            await order.save();
+            return res.status(502).json({ success: false, message: 'Order was created, but the M-Pesa prompt could not be sent.', orderId, details: stkData });
+        }
+
+        return res.status(201).json({
+            success: true,
+            message: 'Order created and M-Pesa prompt sent.',
+            orderId,
+            transactionId,
+            order,
+            data: stkData
+        });
+    } catch (error) {
+        console.error('Admin PayCloud STK error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to create the order or send the payment prompt.' });
+    }
+});
 
 router.post('/paycloud/stk-push', async (req, res) => {
     try {

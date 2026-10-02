@@ -2,7 +2,7 @@
 import mongoose from 'mongoose';
 
 const OrderSchema = new mongoose.Schema({
-    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
     orderId: { type: String, unique: true, required: true }, // e.g., RR-1025-AX
     transactionId: { type: String, unique: true, required: true }, // e.g., TRX-998234
     items: [{
