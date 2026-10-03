@@ -148,6 +148,20 @@ router.get('/admin/all', verifyAdmin, async (req, res) => {
     }
 });
 
+router.delete('/admin/:id', verifyAdmin, async (req, res) => {
+    try {
+        const deletedOrder = await Order.findByIdAndDelete(req.params.id);
+        if (!deletedOrder) {
+            return res.status(404).json({ success: false, message: 'Order not found.' });
+        }
+
+        return res.json({ success: true, message: 'Order deleted successfully.' });
+    } catch (error) {
+        console.error('Admin order deletion error:', error);
+        return res.status(500).json({ success: false, message: 'Failed to delete order.' });
+    }
+});
+
 // GET THE TOTAL NUMBER OF ORDERS, Delivered Orders, Pending Orders (Admin Access)
 router.get('/admin/total-orders', verifyAdmin, async (req, res) => {
     try {
